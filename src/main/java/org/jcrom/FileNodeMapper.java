@@ -181,7 +181,12 @@ class FileNodeMapper {
 
     private void addSingleFileToNode(Field field, Object obj, String nodeName, Node node, Mapper mapper, int depth, NodeFilter nodeFilter) throws IllegalAccessException, RepositoryException, IOException {
 
-        JcrNode fileJcrNode = ReflectionUtils.getJcrNodeAnnotation(field.getType());
+        JcrNode fileJcrNode = null;
+        if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+            fileJcrNode = ReflectionUtils.getJcrNodeAnnotation(ReflectionUtils.getObjectPropertyGeneric(obj, field));
+        } else {
+            fileJcrNode = ReflectionUtils.getJcrNodeAnnotation(field.getType());
+        }
         Node fileContainer = createFileFolderNode(fileJcrNode, nodeName, node, mapper);
 
         if (!fileContainer.hasNodes()) {
@@ -513,12 +518,24 @@ class FileNodeMapper {
             } else {
                 // instantiate the field class
                 if (fileContainer.hasNodes()) {
+                    Object file = null;
+                    Class type = null;
+                    if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                        type = ReflectionUtils.getObjectPropertyGeneric(obj, field);
+                    } else {
+                        type = field.getType();
+                    }
                     if (jcrFileNode.lazy()) {
                         // lazy loading
-                        field.set(obj, ProxyFactory.createFileNodeProxy(field.getType(), obj, fileContainer.getPath(), node.getSession(), mapper, depth, nodeFilter, jcrFileNode));
+                        file = ProxyFactory.createFileNodeProxy(type, obj, fileContainer.getPath(), node.getSession(), mapper, depth, nodeFilter, jcrFileNode);
                     } else {
                         // eager loading
-                        field.set(obj, getSingleFile(field.getType(), fileContainer, obj, jcrFileNode, depth, nodeFilter, mapper));
+                        file = getSingleFile(type, fileContainer, obj, jcrFileNode, depth, nodeFilter, mapper);
+                    }
+                    if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                        ((ObjectProperty) field.get(obj)).set(file);
+                    } else {
+                        field.set(obj, file);
                     }
                 }
             }
