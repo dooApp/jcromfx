@@ -30,6 +30,8 @@ import javax.jcr.NodeIterator;
 import javax.jcr.Property;
 import javax.jcr.RepositoryException;
 
+import javafx.beans.property.ListProperty;
+import javafx.beans.property.MapProperty;
 import org.jcrom.annotations.JcrChildNode;
 import org.jcrom.util.NodeFilter;
 import org.jcrom.util.ReflectionUtils;
@@ -185,7 +187,7 @@ class ChildNodeMapper {
                     String key = (String) entry.getKey();
                     String cleanKey = mapper.getCleanName(key);
                     if (childContainer.hasNode(cleanKey)) {
-                        if (ReflectionUtils.implementsInterface(paramClass, List.class)) {
+                        if (isList(paramClass)) {
                             // lists are hard to update, so we just recreate it
                             childContainer.getNode(cleanKey).remove();
                             Node listContainer = childContainer.addNode(cleanKey);
@@ -227,7 +229,7 @@ class ChildNodeMapper {
     }
 
     private void addMapChild(Class<?> paramClass, Node childContainer, Map<?, ?> childMap, String key, String cleanKey, Mapper mapper) throws IllegalAccessException, RepositoryException, IOException {
-        if (ReflectionUtils.implementsInterface(paramClass, List.class)) {
+        if (isList(paramClass)) {
             List<?> childList = (List<?>) childMap.get(key);
             // create a container for the List
             Node listContainer = childContainer.addNode(cleanKey);
@@ -247,10 +249,10 @@ class ChildNodeMapper {
 
         // make sure that this child is supposed to be updated
         if (nodeFilter == null || nodeFilter.isIncluded(field.getName(), depth)) {
-            if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+            if (isList(field)) {
                 // multiple children in a List
                 addMultipleChildrenToNode(field, jcrChildNode, obj, nodeName, node, mapper, depth, nodeFilter);
-            } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+            } else if (isMap(field)) {
                 // multiple children in a Map
                 addMapOfChildrenToNode(field, jcrChildNode, obj, nodeName, node, mapper, depth, nodeFilter);
             } else {
@@ -258,6 +260,20 @@ class ChildNodeMapper {
                 addSingleChildToNode(field, jcrChildNode, obj, nodeName, node, mapper, depth, nodeFilter);
             }
         }
+    }
+
+    private boolean isMap(Field field) {
+        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
+                || MapProperty.class.isAssignableFrom(field.getType());
+    }
+
+    private boolean isList(Field field) {
+        return isList(field.getType());
+    }
+
+    private boolean isList(Class<?> clazz) {
+        return ReflectionUtils.implementsInterface(clazz, List.class)
+                || ListProperty.class.isAssignableFrom(clazz);
     }
 
     void addChildren(Field field, Object entity, Node node, Mapper mapper) throws IllegalAccessException, RepositoryException, IOException {
@@ -291,7 +307,7 @@ class ChildNodeMapper {
         NodeIterator iterator = childrenContainer.getNodes();
         while (iterator.hasNext()) {
             Node childNode = iterator.nextNode();
-            if (ReflectionUtils.implementsInterface(mapParamClass, List.class)) {
+            if (isList(mapParamClass)) {
                 // each value in the map is a list of child nodes
                 if (jcrChildNode.lazy()) {
                     // lazy loading
@@ -328,12 +344,12 @@ class ChildNodeMapper {
 
         boolean childHasNodes = node.hasNode(nodeName) && (node.getNode(nodeName).hasNodes() || node.getNode(nodeName).hasProperty(Property.JCR_CHILD_VERSION_HISTORY));
 
-        if (node.hasNode(nodeName) && (childHasNodes || (!jcrChildNode.createContainerNode() && !ReflectionUtils.implementsInterface(field.getType(), List.class) && !ReflectionUtils.implementsInterface(field.getType(), Map.class))) && nodeFilter.isIncluded(nodeName, depth)) {
+        if (node.hasNode(nodeName) && (childHasNodes || (!jcrChildNode.createContainerNode() && !ReflectionUtils.implementsInterface(field.getType(), List.class) && !ListProperty.class.isAssignableFrom(field.getType()) && !ReflectionUtils.implementsInterface(field.getType(), Map.class) && !MapProperty.class.isAssignableFrom(field.getType()))) && nodeFilter.isIncluded(nodeName, depth)) {
 
             // child nodes are almost always stored inside a container node
             Node childrenContainer = node.getNode(nodeName);
             childrenContainer = mapper.checkIfVersionedChild(childrenContainer);
-            if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+            if (isList(field)) {
                 // we can expect more than one child object here
                 Class<?> childObjClass = ReflectionUtils.getParameterizedClass(field);
                 List<?> children;
@@ -344,13 +360,22 @@ class ChildNodeMapper {
                     // eager loading
                     children = getChildrenList(childObjClass, childrenContainer, obj, mapper, depth, nodeFilter, jcrChildNode);
                 }
-                field.set(obj, children);
+                if (ListProperty.class.isAssignableFrom(field.getType())) {
+                    ((ListProperty) field.get(obj)).setAll(children);
+                } else {
+                    field.set(obj, children);
+                }
 
-            } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+            } else if (isMap(field)) {
                 // dynamic map of child nodes
                 // lazy loading is applied to each value in the Map
                 Class<?> mapParamClass = ReflectionUtils.getParameterizedClass(field, 1);
-                field.set(obj, getChildrenMap(mapParamClass, childrenContainer, obj, mapper, depth, nodeFilter, jcrChildNode));
+                Map<?, ?> childrenMap = getChildrenMap(mapParamClass, childrenContainer, obj, mapper, depth, nodeFilter, jcrChildNode);
+                if (MapProperty.class.isAssignableFrom(field.getType())) {
+                    ((MapProperty)field.get(obj)).putAll(childrenMap);
+                } else {
+                    field.set(obj, childrenMap);
+                }
 
             } else {
                 // instantiate the field class
@@ -402,9 +427,9 @@ class ChildNodeMapper {
             field.setAccessible(true);
             if (mapper.getJcrom().getAnnotationReader().isAnnotationPresent(field, JcrChildNode.class)) {
                 Class<?> childObjClass;
-                if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+                if (isList(field)) {
                     childObjClass = ReflectionUtils.getParameterizedClass(field);
-                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+                } else if (isMap(field)) {
                     childObjClass = ReflectionUtils.getParameterizedClass(field, 1);
                 } else {
                     childObjClass = field.getType();

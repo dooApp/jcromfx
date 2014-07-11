@@ -106,14 +106,12 @@ class Validator {
 
             if (jcrom.getAnnotationReader().isAnnotationPresent(field, JcrProperty.class)) {
                 // make sure that the property type is supported
-                if (ReflectionUtils.implementsInterface(field.getType(), List.class)
-                        || ListProperty.class.isAssignableFrom(field.getType())) {
+                if (isList(field)) {
                     if (!ReflectionUtils.isFieldParameterizedWithPropertyType(field)) {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is a List annotated as @JcrProperty is not parameterized with a property type.");
                     }
 
-                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)
-                        || MapProperty.class.isAssignableFrom(field.getType())) {
+                } else if (isMap(field)) {
                     // special case, mapping a Map of properties, so we must
                     // make sure that it is properly parameterized:
                     // first parameter must be a String
@@ -210,7 +208,7 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrChildNode.class)) {
                 // make sure that the child node type are valid JCR classes
-                if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+                if (isList(field)) {
                     // map a List of child nodes, here we must make sure that
                     // the List is parameterized
                     Class<?> paramClass = ReflectionUtils.getParameterizedClass(field);
@@ -220,7 +218,7 @@ class Validator {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrChildNode is a java.util.List that is not parameterised with a valid class type.");
                     }
 
-                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+                } else if (isMap(field)) {
                     // special case, mapping a Map of child nodes, so we must
                     // make sure that it is properly parameterized:
                     // first parameter must be a String
@@ -241,12 +239,12 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrFileNode.class)) {
                 // make sure that the file node type is a JcrFile
-                if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+                if (isList(field)) {
                     if (!ReflectionUtils.extendsClass(ReflectionUtils.getParameterizedClass(field), JcrFile.class)) {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is a List annotated as @JcrFileNode is not parameterized with a JcrFile implementation.");
                     }
 
-                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+                } else if (isMap(field)) {
                     // special case, mapping a Map of file nodes, so we must
                     // make sure that it is properly parameterized:
                     // first parameter must be a String
@@ -269,7 +267,7 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrReference.class)) {
                 Class<?> fieldType;
-                if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+                if (isList(field)) {
                     fieldType = ReflectionUtils.getParameterizedClass(field);
 
                 } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
@@ -321,5 +319,15 @@ class Validator {
         if (!foundPathField) {
             throw new JcrMappingException("In [" + c.getName() + "]: No field is annotated with @JcrPath.");
         }
+    }
+
+    private boolean isMap(Field field) {
+        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
+                || MapProperty.class.isAssignableFrom(field.getType());
+    }
+
+    private boolean isList(Field field) {
+        return ReflectionUtils.implementsInterface(field.getType(), List.class)
+                || ListProperty.class.isAssignableFrom(field.getType());
     }
 }
