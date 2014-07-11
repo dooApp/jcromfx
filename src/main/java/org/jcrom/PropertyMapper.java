@@ -42,6 +42,7 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Value;
 import javax.jcr.ValueFactory;
 
+import javafx.beans.property.ObjectProperty;
 import org.jcrom.annotations.JcrProperty;
 import org.jcrom.annotations.JcrProtectedProperty;
 import org.jcrom.annotations.JcrSerializedProperty;
@@ -220,7 +221,12 @@ class PropertyMapper {
 
             } else {
                 // single-value property
-                field.set(obj, JcrUtils.getValue(field.getType(), p.getValue()));
+                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                    ObjectProperty property =  (ObjectProperty) field.get(obj);
+                    property.setValue(JcrUtils.getValue(ReflectionUtils.getObjectPropertyGeneric(obj, field), p.getValue()));
+                } else {
+                    field.set(obj, JcrUtils.getValue(field.getType(), p.getValue()));
+                }
             }
         }
     }
