@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javafx.beans.property.ListProperty;
+import javafx.beans.property.MapProperty;
 import org.jcrom.annotations.JcrBaseVersionCreated;
 import org.jcrom.annotations.JcrBaseVersionName;
 import org.jcrom.annotations.JcrCheckedout;
@@ -104,12 +106,14 @@ class Validator {
 
             if (jcrom.getAnnotationReader().isAnnotationPresent(field, JcrProperty.class)) {
                 // make sure that the property type is supported
-                if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+                if (ReflectionUtils.implementsInterface(field.getType(), List.class)
+                        || ListProperty.class.isAssignableFrom(field.getType())) {
                     if (!ReflectionUtils.isFieldParameterizedWithPropertyType(field)) {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is a List annotated as @JcrProperty is not parameterized with a property type.");
                     }
 
-                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)
+                        || MapProperty.class.isAssignableFrom(field.getType())) {
                     // special case, mapping a Map of properties, so we must
                     // make sure that it is properly parameterized:
                     // first parameter must be a String
