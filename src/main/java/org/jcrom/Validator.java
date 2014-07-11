@@ -28,6 +28,7 @@ import java.util.logging.Logger;
 
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.MapProperty;
+import javafx.beans.property.ObjectProperty;
 import org.jcrom.annotations.JcrBaseVersionCreated;
 import org.jcrom.annotations.JcrBaseVersionName;
 import org.jcrom.annotations.JcrCheckedout;
@@ -260,7 +261,8 @@ class Validator {
                     }
 
                 } else {
-                    if (!ReflectionUtils.extendsClass(field.getType(), JcrFile.class)) {
+                    if (!ReflectionUtils.extendsClass(field.getType(), JcrFile.class)
+                            && !ObjectProperty.class.isAssignableFrom(field.getType())) {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrFileNode is of type that does not extend JcrFile: " + field.getType().getName());
                     }
                 }
@@ -270,7 +272,7 @@ class Validator {
                 if (isList(field)) {
                     fieldType = ReflectionUtils.getParameterizedClass(field);
 
-                } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+                } else if (isMap(field)) {
                     // special case, mapping a Map of references, so we must
                     // make sure that it is properly parameterized:
                     // first parameter must be a String
@@ -285,6 +287,8 @@ class Validator {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrReference is a java.util.Map that is not parameterised with a valid value type (Object or List<Object>).");
                     }
                     fieldType = null;
+                } else if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                    fieldType = ReflectionUtils.getObjectPropertyGeneric(null, field);
                 } else {
                     fieldType = field.getType();
                 }

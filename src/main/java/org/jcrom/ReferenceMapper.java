@@ -32,6 +32,9 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import javax.jcr.Value;
 
+import javafx.beans.property.ListProperty;
+import javafx.beans.property.MapProperty;
+import javafx.beans.property.ObjectProperty;
 import org.jcrom.annotations.JcrFileNode;
 import org.jcrom.annotations.JcrReference;
 import org.jcrom.util.NodeFilter;
@@ -92,9 +95,14 @@ class ReferenceMapper {
     private void addSingleReferenceToNode(Field field, Object obj, String propertyName, Node node) throws IllegalAccessException, RepositoryException {
         // extract the Identifier from the object, load the node, and add a reference to it
         JcrReference jcrReference = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrReference.class);
-        Object referenceObject = field.get(obj);
+        Object referenceObject = null;
+        if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+           referenceObject = ((ObjectProperty) field.get(obj)).get();
+        } else {
+           referenceObject = field.get(obj);
+        }
         if (referenceObject != null) {
-            referenceObject = mapper.clearCglib(field.get(obj));
+            referenceObject = mapper.clearCglib(referenceObject);
         }
 
         if (referenceObject != null) {
@@ -173,7 +181,7 @@ class ReferenceMapper {
             Class<?> paramClass = ReflectionUtils.getParameterizedClass(field, 1);
             for (Map.Entry<?, ?> entry : referenceMap.entrySet()) {
                 String key = (String) entry.getKey();
-                if (ReflectionUtils.implementsInterface(paramClass, List.class)) {
+                if (isList(paramClass)) {
                     List<?> references = (List<?>) entry.getValue();
                     List<Value> refValues = getReferenceValues(references, referenceContainer.getSession(), jcrReference);
                     if (!refValues.isEmpty()) {
@@ -194,10 +202,10 @@ class ReferenceMapper {
 
         // make sure that the reference should be updated
         if (nodeFilter == null || nodeFilter.isNameIncluded(field.getName())) {
-            if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+            if (isList(field.getType())) {
                 // multiple references in a List
                 addMultipleReferencesToNode(field, obj, propertyName, node);
-            } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+            } else if (isMap(field)) {
                 // multiple references in a Map
                 addMapOfReferencesToNode(field, obj, propertyName, node);
             } else {
@@ -205,6 +213,11 @@ class ReferenceMapper {
                 addSingleReferenceToNode(field, obj, propertyName, node);
             }
         }
+    }
+
+    private boolean isMap(Field field) {
+        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
+                || MapProperty.class.isAssignableFrom(field.getType());
     }
 
     void addReferences(Field field, Object obj, Node node) throws IllegalAccessException, RepositoryException {
@@ -300,7 +313,7 @@ class ReferenceMapper {
             while (propertyIterator.hasNext()) {
                 Property p = propertyIterator.nextProperty();
                 if (!p.getName().startsWith("jcr:") && !p.getName().startsWith(NamespaceRegistry.NAMESPACE_JCR)) {
-                    if (ReflectionUtils.implementsInterface(mapParamClass, List.class)) {
+                    if (isList(mapParamClass)) {
                         if (jcrReference.lazy()) {
                             references.put(p.getName(), ProxyFactory.createReferenceListProxy(Object.class, obj, containerNode.getPath(), p.getName(), node.getSession(), mapper, depth, nodeFilter, field));
                         } else {
@@ -320,36 +333,62 @@ class ReferenceMapper {
         return references;
     }
 
+    private boolean isList(Class<?> mapParamClass) {
+        return ReflectionUtils.implementsInterface(mapParamClass, List.class)
+                || ListProperty.class.isAssignableFrom(mapParamClass);
+    }
+
     void getReferencesFromNode(Field field, Node node, Object obj, int depth, NodeFilter nodeFilter, Mapper mapper) throws ClassNotFoundException, InstantiationException, RepositoryException, IllegalAccessException, IOException {
 
         String propertyName = getPropertyName(field);
         JcrReference jcrReference = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrReference.class);
 
-        if (ReflectionUtils.implementsInterface(field.getType(), List.class)) {
+        if (isList(field.getType())) {
             // multiple references in a List
             Class<?> referenceObjClass = ReflectionUtils.getParameterizedClass(field);
+            List value = null;
             if (jcrReference.lazy()) {
                 // lazy loading
-                field.set(obj, ProxyFactory.createReferenceListProxy(referenceObjClass, obj, node.getPath(), propertyName, node.getSession(), mapper, depth, nodeFilter, field));
+                value = ProxyFactory.createReferenceListProxy(referenceObjClass, obj, node.getPath(), propertyName, node.getSession(), mapper, depth, nodeFilter, field);
             } else {
                 // eager loading
-                field.set(obj, getReferenceList(field, propertyName, referenceObjClass, node, obj, depth, nodeFilter, mapper));
+                value = getReferenceList(field, propertyName, referenceObjClass, node, obj, depth, nodeFilter, mapper);
             }
-
-        } else if (ReflectionUtils.implementsInterface(field.getType(), Map.class)) {
+            if (ListProperty.class.isAssignableFrom(field.getType())) {
+                ((ListProperty) field.get(obj)).setAll(value);
+            } else {
+                field.set(obj, value);
+            }
+        } else if (isMap(field)) {
             // multiple references in a Map
             // lazy loading is applied to each value in the Map
             Class<?> mapParamClass = ReflectionUtils.getParameterizedClass(field, 1);
-            field.set(obj, getReferenceMap(field, propertyName, mapParamClass, node, obj, depth, nodeFilter, mapper, jcrReference));
+            Map<String, Object> value = getReferenceMap(field, propertyName, mapParamClass, node, obj, depth, nodeFilter, mapper, jcrReference);
+            if (MapProperty.class.isAssignableFrom(field.getType())) {
+                ((MapProperty) field.get(obj)).putAll(value);
+            } else {
+                field.set(obj, value);
+            }
 
         } else {
             // single reference
             if (node.hasProperty(propertyName)) {
-                Class<?> referenceObjClass = field.getType();
-                if (jcrReference.lazy()) {
-                    field.set(obj, ProxyFactory.createReferenceProxy(referenceObjClass, obj, node.getPath(), propertyName, node.getSession(), mapper, depth, nodeFilter, field));
+                Class<?> referenceObjClass = null;
+                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                  referenceObjClass = ReflectionUtils.getObjectPropertyGeneric(obj, field);
                 } else {
-                    field.set(obj, createReferencedObject(field, node.getProperty(propertyName).getValue(), obj, node.getSession(), referenceObjClass, depth, nodeFilter, mapper));
+                    referenceObjClass = field.getType();
+                }
+                Object value = null;
+                if (jcrReference.lazy()) {
+                    value = ProxyFactory.createReferenceProxy(referenceObjClass, obj, node.getPath(), propertyName, node.getSession(), mapper, depth, nodeFilter, field);
+                } else {
+                    value = createReferencedObject(field, node.getProperty(propertyName).getValue(), obj, node.getSession(), referenceObjClass, depth, nodeFilter, mapper);
+                }
+                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                    ((ObjectProperty)field.get(obj)).set(value);
+                }   else {
+                    field.set(obj, value);
                 }
             }
         }
