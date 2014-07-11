@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
+import javafx.beans.property.*;
 import org.jcrom.annotations.JcrNode;
 
 /**
@@ -138,7 +139,7 @@ public final class ReflectionUtils {
     }
 
     public static boolean isValidMapValueType(Class<?> type) {
-        return type == String.class || isArrayOfType(type, String.class) || type == Date.class || isArrayOfType(type, Date.class) || type == Calendar.class || isArrayOfType(type, Calendar.class) || type == Timestamp.class || isArrayOfType(type, Timestamp.class) || type == Integer.class || isArrayOfType(type, Integer.class) || type == int.class || isArrayOfType(type, int.class) || type == Long.class || isArrayOfType(type, Long.class) || type == long.class || isArrayOfType(type, long.class) || type == Double.class || isArrayOfType(type, Double.class) || type == double.class || isArrayOfType(type, double.class) || type == Boolean.class || isArrayOfType(type, Boolean.class) || type == boolean.class || isArrayOfType(type, boolean.class) || type == Locale.class || isArrayOfType(type, Locale.class) || type.isEnum() || (type.isArray() && type.getComponentType().isEnum());
+        return  type == String.class || type == StringProperty.class || isArrayOfType(type, String.class) || type == Date.class || isArrayOfType(type, Date.class) || type == Calendar.class || isArrayOfType(type, Calendar.class) || type == Timestamp.class || isArrayOfType(type, Timestamp.class) || type == Integer.class || type == IntegerProperty.class || isArrayOfType(type, Integer.class) || type == int.class || isArrayOfType(type, int.class) || type == Long.class || type == LongProperty.class || isArrayOfType(type, Long.class) || type == long.class || isArrayOfType(type, long.class) || type == Double.class || type == LongProperty.class || isArrayOfType(type, Double.class) || type == double.class || isArrayOfType(type, double.class) || type == Boolean.class || type == BooleanProperty.class || isArrayOfType(type, Boolean.class) || type == boolean.class || isArrayOfType(type, boolean.class) || type == Locale.class || isArrayOfType(type, Locale.class) || type.isEnum() || (type.isArray() && type.getComponentType().isEnum());
     }
 
     private static boolean isArrayOfType(Class<?> c, Class<?> type) {

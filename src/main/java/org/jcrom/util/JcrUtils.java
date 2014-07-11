@@ -39,6 +39,7 @@ import javax.jcr.nodetype.NodeType;
 import javax.jcr.version.Version;
 import javax.jcr.version.VersionManager;
 
+import javafx.beans.property.*;
 import org.jcrom.JcrMappingException;
 import org.jcrom.util.io.IOUtils;
 
@@ -187,7 +188,10 @@ public final class JcrUtils {
      * @throws RepositoryException
      */
     public static Value createValue(Class<?> c, Object value, ValueFactory valueFactory) throws RepositoryException {
-        if (c == String.class) {
+        if (Property.class.isAssignableFrom(c)) {
+            Object wrappedValue = ((Property) value).getValue();
+            return createValue(wrappedValue.getClass(), wrappedValue, valueFactory);
+        } else if (c == String.class) {
             return valueFactory.createValue((String) value);
         } else if (c == Date.class) {
             Calendar cal = Calendar.getInstance();
@@ -235,6 +239,8 @@ public final class JcrUtils {
     public static Object getValue(Class<?> c, Value value) throws RepositoryException, IOException {
         if (c == String.class) {
             return value.getString();
+        } else if (c == StringProperty.class) {
+            return new SimpleStringProperty(value.getString());
         } else if (c == Date.class) {
             return value.getDate().getTime();
         } else if (c == Timestamp.class) {
@@ -250,12 +256,20 @@ public final class JcrUtils {
             return IOUtils.toByteArray(value.getBinary().getStream());
         } else if (c == Integer.class || c == int.class) {
             return (int) value.getDouble();
+        } else if (c == IntegerProperty.class) {
+            return new SimpleIntegerProperty((int) value.getLong());
         } else if (c == Long.class || c == long.class) {
             return value.getLong();
+        } else if (c == LongProperty.class) {
+            return new SimpleLongProperty(value.getLong());
         } else if (c == Double.class || c == double.class) {
             return value.getDouble();
+        } else if (c == DoubleProperty.class) {
+            return new SimpleDoubleProperty(value.getDouble());
         } else if (c == Boolean.class || c == boolean.class) {
             return value.getBoolean();
+        } else if (c == BooleanProperty.class) {
+            return new SimpleBooleanProperty(value.getBoolean());
         } else if (c == Locale.class) {
             return parseLocale(value.getString());
         } else if (c.isEnum()) {
