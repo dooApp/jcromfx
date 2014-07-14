@@ -1,4 +1,4 @@
 jcrom
 =====
 
-JCROM fork
+JCROM fork with JavaFX properties support.
