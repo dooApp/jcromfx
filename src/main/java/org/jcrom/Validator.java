@@ -21,14 +21,11 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javafx.beans.property.ListProperty;
-import javafx.beans.property.MapProperty;
-import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.*;
 import org.jcrom.annotations.JcrBaseVersionCreated;
 import org.jcrom.annotations.JcrBaseVersionName;
 import org.jcrom.annotations.JcrCheckedout;
@@ -47,6 +44,10 @@ import org.jcrom.annotations.JcrUUID;
 import org.jcrom.annotations.JcrVersionCreated;
 import org.jcrom.annotations.JcrVersionName;
 import org.jcrom.util.ReflectionUtils;
+
+import static org.jcrom.util.JavaFXUtils.isList;
+import static org.jcrom.util.JavaFXUtils.isMap;
+import static org.jcrom.util.JavaFXUtils.isNotString;
 
 /**
  * This class is used by Jcrom to validate that the classes being mapped are correctly annotated as valid JCR classes.
@@ -144,7 +145,7 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrName.class)) {
                 // make sure this is a String field
-                if (field.getType() != String.class) {
+                if (isNotString(field)) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrName must be of type java.lang.String, but is of type: " + field.getType().getName());
                 }
                 foundNameField = true;
@@ -163,7 +164,7 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrPath.class)) {
                 // make sure this is a String field
-                if (field.getType() != String.class) {
+                if (isNotString(field)) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrPath must be of type java.lang.String, but is of type: " + field.getType().getName());
                 }
                 foundPathField = true;
@@ -235,7 +236,11 @@ class Validator {
                     }
 
                 } else {
-                    validateInternal(field.getType(), validClasses, dynamicInstantiation);
+                    if (ObjectProperty.class.isAssignableFrom(field.getType())) {
+                        validateInternal(ReflectionUtils.getObjectPropertyGeneric(null, field), validClasses, dynamicInstantiation);
+                    } else {
+                        validateInternal(field.getType(), validClasses, dynamicInstantiation);
+                    }
                 }
 
             } else if (field.isAnnotationPresent(JcrFileNode.class)) {
@@ -325,13 +330,4 @@ class Validator {
         }
     }
 
-    private boolean isMap(Field field) {
-        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
-                || MapProperty.class.isAssignableFrom(field.getType());
-    }
-
-    private boolean isList(Field field) {
-        return ReflectionUtils.implementsInterface(field.getType(), List.class)
-                || ListProperty.class.isAssignableFrom(field.getType());
-    }
 }

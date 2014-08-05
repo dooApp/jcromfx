@@ -190,7 +190,11 @@ public final class JcrUtils {
     public static Value createValue(Class<?> c, Object value, ValueFactory valueFactory) throws RepositoryException {
         if (Property.class.isAssignableFrom(c)) {
             Object wrappedValue = ((Property) value).getValue();
-            return createValue(wrappedValue.getClass(), wrappedValue, valueFactory);
+            if (wrappedValue == null) {
+                return null;
+            } else {
+                return createValue(wrappedValue.getClass(), wrappedValue, valueFactory);
+            }
         } else if (c == String.class) {
             return valueFactory.createValue((String) value);
         } else if (c == Date.class) {
@@ -237,10 +241,8 @@ public final class JcrUtils {
      * @throws IOException
      */
     public static Object getValue(Class<?> c, Value value) throws RepositoryException, IOException {
-        if (c == String.class) {
+        if (c == String.class || StringProperty.class.isAssignableFrom(c)) {
             return value.getString();
-        } else if (c == StringProperty.class) {
-            return new SimpleStringProperty(value.getString());
         } else if (c == Date.class) {
             return value.getDate().getTime();
         } else if (c == Timestamp.class) {
@@ -254,22 +256,14 @@ public final class JcrUtils {
             // byte array...we need to read from the stream
             //return Mapper.readBytes(value.getStream());
             return IOUtils.toByteArray(value.getBinary().getStream());
-        } else if (c == Integer.class || c == int.class) {
+        } else if (c == Integer.class || c == int.class || IntegerProperty.class.isAssignableFrom(c)) {
             return (int) value.getDouble();
-        } else if (c == IntegerProperty.class) {
-            return new SimpleIntegerProperty((int) value.getLong());
-        } else if (c == Long.class || c == long.class) {
+        } else if (c == Long.class || c == long.class || LongProperty.class.isAssignableFrom(c)) {
             return value.getLong();
-        } else if (c == LongProperty.class) {
-            return new SimpleLongProperty(value.getLong());
-        } else if (c == Double.class || c == double.class) {
+        } else if (c == Double.class || c == double.class || DoubleProperty.class.isAssignableFrom(c)) {
             return value.getDouble();
-        } else if (c == DoubleProperty.class) {
-            return new SimpleDoubleProperty(value.getDouble());
-        } else if (c == Boolean.class || c == boolean.class) {
+        } else if (c == Boolean.class || c == boolean.class || BooleanProperty.class.isAssignableFrom(c)) {
             return value.getBoolean();
-        } else if (c == BooleanProperty.class) {
-            return new SimpleBooleanProperty(value.getBoolean());
         } else if (c == Locale.class) {
             return parseLocale(value.getString());
         } else if (c.isEnum()) {

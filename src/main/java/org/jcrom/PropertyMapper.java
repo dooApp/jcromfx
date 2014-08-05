@@ -44,13 +44,15 @@ import javax.jcr.ValueFactory;
 
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.MapProperty;
-import javafx.beans.property.ObjectProperty;
 import org.jcrom.annotations.JcrProperty;
 import org.jcrom.annotations.JcrProtectedProperty;
 import org.jcrom.annotations.JcrSerializedProperty;
 import org.jcrom.util.JcrUtils;
 import org.jcrom.util.NodeFilter;
 import org.jcrom.util.ReflectionUtils;
+
+import static org.jcrom.util.JavaFXUtils.getValue;
+import static org.jcrom.util.JavaFXUtils.setObject;
 
 /**
  * This class handles mappings of type @JcrProperty
@@ -85,11 +87,7 @@ class PropertyMapper {
                 }
             }
         }
-        if (MapProperty.class.isAssignableFrom(field.getType())) {
-            ((MapProperty) field.get(obj)).putAll(map);
-        } else {
-            field.set(obj,map);
-        }
+        setObject(field, obj, map);
     }
 
     private Object[] valuesToArray(Class<?> type, Value[] values) throws RepositoryException, IOException {
@@ -107,7 +105,7 @@ class PropertyMapper {
             if (node.hasProperty(propertyName)) {
                 Property p = node.getProperty(propertyName);
                 //field.set(obj, deserialize(p.getStream()));
-                field.set(obj, deserialize(p.getBinary().getStream()));
+                setObject(field, obj, deserialize(p.getBinary().getStream()));
             }
         }
     }
@@ -203,7 +201,7 @@ class PropertyMapper {
                 for (Value value : p.getValues()) {
                     properties.add(JcrUtils.getValue(paramClass, value));
                 }
-                field.set(obj, properties);
+                setObject(field, obj, properties);
 
             } else if (ListProperty.class.isAssignableFrom(field.getType())) {
                 ListProperty<Object> list = (ListProperty) field.get(obj);
@@ -221,44 +219,39 @@ class PropertyMapper {
                     for (int i = 0; i < values.length; i++) {
                         arr[i] = (int) values[i].getDouble();
                     }
-                    field.set(obj, arr);
+                   setObject(field, obj, arr);
                 } else if (field.getType().getComponentType() == long.class) {
                     long[] arr = new long[values.length];
                     for (int i = 0; i < values.length; i++) {
                         arr[i] = values[i].getLong();
                     }
-                    field.set(obj, arr);
+                    setObject(field, obj, arr);
                 } else if (field.getType().getComponentType() == double.class) {
                     double[] arr = new double[values.length];
                     for (int i = 0; i < values.length; i++) {
                         arr[i] = values[i].getDouble();
                     }
-                    field.set(obj, arr);
+                    setObject(field, obj, arr);
                 } else if (field.getType().getComponentType() == boolean.class) {
                     boolean[] arr = new boolean[values.length];
                     for (int i = 0; i < values.length; i++) {
                         arr[i] = values[i].getBoolean();
                     }
-                    field.set(obj, arr);
+                    setObject(field, obj, arr);
                 } else if (field.getType().getComponentType() == Locale.class) {
                     Locale[] arr = new Locale[values.length];
                     for (int i = 0; i < values.length; i++) {
                         arr[i] = JcrUtils.parseLocale(values[i].getString());
                     }
-                    field.set(obj, arr);
+                    setObject(field, obj, arr);
                 } else {
                     Object[] arr = valuesToArray(field.getType().getComponentType(), values);
-                    field.set(obj, arr);
+                    setObject(field, obj, arr);
                 }
 
             } else {
                 // single-value property
-                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-                    ObjectProperty property =  (ObjectProperty) field.get(obj);
-                    property.setValue(JcrUtils.getValue(ReflectionUtils.getObjectPropertyGeneric(obj, field), p.getValue()));
-                } else {
-                    field.set(obj, JcrUtils.getValue(field.getType(), p.getValue()));
-                }
+                setObject(field, obj, getValue(field, obj, p));
             }
         }
     }

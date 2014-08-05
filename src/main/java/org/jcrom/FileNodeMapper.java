@@ -44,6 +44,10 @@ import org.jcrom.util.NodeFilter;
 import org.jcrom.util.ReflectionUtils;
 import org.jcrom.util.io.IOUtils;
 
+import static org.jcrom.util.JavaFXUtils.isList;
+import static org.jcrom.util.JavaFXUtils.isMap;
+import static org.jcrom.util.JavaFXUtils.setObject;
+
 /**
  * This class handles mappings of type @JcrFileNode
  * 
@@ -326,11 +330,6 @@ class FileNodeMapper {
         }
     }
 
-    private boolean isList(Class<?> paramClass) {
-        return ReflectionUtils.implementsInterface(paramClass, List.class)
-                || ListProperty.class.isAssignableFrom(paramClass);
-    }
-
     private void addMapFile(Class<?> paramClass, JcrNode fileJcrNode, Node fileContainer, Map<?, ?> childMap, String key, Mapper mapper) throws IllegalAccessException, RepositoryException, IOException {
 
         if (isList(paramClass)) {
@@ -361,11 +360,6 @@ class FileNodeMapper {
                 addSingleFileToNode(field, obj, nodeName, node, mapper, depth, nodeFilter);
             }
         }
-    }
-
-    private boolean isMap(Field field) {
-        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
-                || MapProperty.class.isAssignableFrom(field.getType());
     }
 
     @SuppressWarnings("unchecked")
@@ -502,16 +496,12 @@ class FileNodeMapper {
                     // eager loading
                     children = getFileList(childObjClass, fileContainer, obj, jcrFileNode, depth, nodeFilter, mapper);
                 }
-                if (ListProperty.class.isAssignableFrom(field.getType())) {
-                    ((ListProperty)field.get(obj)).setAll(children);
-                } else {
-                    field.set(obj, children);
-                }
+                setObject(field, obj, children);
 
             } else if (isMap(field)) {
                 // dynamic map of child nodes
                 // lazy loading is applied to each value in the Map
-                field.set(obj, getFileMap(field, fileContainer, jcrFileNode, obj, depth, nodeFilter, mapper));
+                setObject(field, obj, getFileMap(field, fileContainer, jcrFileNode, obj, depth, nodeFilter, mapper));
 
             } else if (MapProperty.class.isAssignableFrom(field.getType())) {
                 ((MapProperty)field.get(obj)).putAll(getFileMap(field, fileContainer, jcrFileNode, obj, depth, nodeFilter, mapper));

@@ -41,6 +41,10 @@ import org.jcrom.util.NodeFilter;
 import org.jcrom.util.PathUtils;
 import org.jcrom.util.ReflectionUtils;
 
+import static org.jcrom.util.JavaFXUtils.isList;
+import static org.jcrom.util.JavaFXUtils.isMap;
+import static org.jcrom.util.JavaFXUtils.setObject;
+
 /**
  * This class handles mappings of type @JcrReference
  * 
@@ -215,11 +219,6 @@ class ReferenceMapper {
         }
     }
 
-    private boolean isMap(Field field) {
-        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
-                || MapProperty.class.isAssignableFrom(field.getType());
-    }
-
     void addReferences(Field field, Object obj, Node node) throws IllegalAccessException, RepositoryException {
         setReferenceProperties(field, obj, node, null);
     }
@@ -333,11 +332,6 @@ class ReferenceMapper {
         return references;
     }
 
-    private boolean isList(Class<?> mapParamClass) {
-        return ReflectionUtils.implementsInterface(mapParamClass, List.class)
-                || ListProperty.class.isAssignableFrom(mapParamClass);
-    }
-
     void getReferencesFromNode(Field field, Node node, Object obj, int depth, NodeFilter nodeFilter, Mapper mapper) throws ClassNotFoundException, InstantiationException, RepositoryException, IllegalAccessException, IOException {
 
         String propertyName = getPropertyName(field);
@@ -354,22 +348,13 @@ class ReferenceMapper {
                 // eager loading
                 value = getReferenceList(field, propertyName, referenceObjClass, node, obj, depth, nodeFilter, mapper);
             }
-            if (ListProperty.class.isAssignableFrom(field.getType())) {
-                ((ListProperty) field.get(obj)).setAll(value);
-            } else {
-                field.set(obj, value);
-            }
+            setObject(field, obj, value);
         } else if (isMap(field)) {
             // multiple references in a Map
             // lazy loading is applied to each value in the Map
             Class<?> mapParamClass = ReflectionUtils.getParameterizedClass(field, 1);
             Map<String, Object> value = getReferenceMap(field, propertyName, mapParamClass, node, obj, depth, nodeFilter, mapper, jcrReference);
-            if (MapProperty.class.isAssignableFrom(field.getType())) {
-                ((MapProperty) field.get(obj)).putAll(value);
-            } else {
-                field.set(obj, value);
-            }
-
+            setObject(field, obj, value);
         } else {
             // single reference
             if (node.hasProperty(propertyName)) {
@@ -385,11 +370,7 @@ class ReferenceMapper {
                 } else {
                     value = createReferencedObject(field, node.getProperty(propertyName).getValue(), obj, node.getSession(), referenceObjClass, depth, nodeFilter, mapper);
                 }
-                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-                    ((ObjectProperty)field.get(obj)).set(value);
-                }   else {
-                    field.set(obj, value);
-                }
+                setObject(field, obj, value);
             }
         }
     }
