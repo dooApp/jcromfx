@@ -28,6 +28,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import static org.jcrom.util.ReflectionUtils.getMethod;
+
 /**
  * User: Antoine Mischler <antoine@dooapp.com>
  * Date: 05/08/2014
@@ -49,7 +51,7 @@ public class JavaFXUtils {
             return property.getValue();
         } else {
             try {
-                Method getter = obj.getClass().getMethod("get" + field.getName());
+                Method getter = getMethod(obj.getClass(), "get" + field.getName());
                 return getter.invoke(obj);
             } catch (NoSuchMethodException e) {
                 try {
@@ -72,7 +74,7 @@ public class JavaFXUtils {
             property.setValue(value);
         } else {
             try {
-                Method setter = obj.getClass().getMethod("set" + field.getName(), value.getClass());
+                Method setter = getMethod(obj.getClass(), "set" + field.getName(), value.getClass());
                 setter.invoke(obj, value);
             } catch (NoSuchMethodException e) {
                 try {
@@ -88,7 +90,7 @@ public class JavaFXUtils {
 
     private static Property getPropertyByPropertyGetter(Field field, Object obj) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         Property property;
-        Method propertyGetter = obj.getClass().getDeclaredMethod(field.getName() + "Property");
+        Method propertyGetter = getMethod(obj.getClass(), field.getName() + "Property");
         property = (Property) propertyGetter.invoke(obj);
         return property;
     }
@@ -113,7 +115,7 @@ public class JavaFXUtils {
                 ((ListProperty) field.get(source)).setAll((Collection) value);
             } else {
                 try {
-                    ((ListProperty) getPropertyByPropertyGetter(field, source)).setAll(value);
+                    ((ListProperty) getPropertyByPropertyGetter(field, source)).setAll((Collection) value);
                 } catch (NoSuchMethodException e) {
                 } catch (InvocationTargetException e) {
                 }

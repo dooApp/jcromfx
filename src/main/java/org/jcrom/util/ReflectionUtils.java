@@ -17,37 +17,20 @@
  */
 package org.jcrom.util;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
-
 import javafx.beans.property.*;
 import org.jcrom.annotations.JcrNode;
 
+import java.io.*;
+import java.lang.reflect.*;
+import java.net.URL;
+import java.sql.Timestamp;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
+
 /**
  * Various reflection utility methods, used mainly in the Mapper.
- * 
+ *
  * @author Olafur Gauti Gudmundsson
  * @author Nicolas Dos Santos
  */
@@ -60,7 +43,7 @@ public final class ReflectionUtils {
      * Get an array of all fields declared in the supplied class,
      * and all its superclasses (except java.lang.Object).
      *
-     * @param type the class for which we want to retrieve the Fields
+     * @param type              the class for which we want to retrieve the Fields
      * @param returnFinalFields specifies whether to return final fields
      * @return an array of all declared and inherited fields
      */
@@ -87,9 +70,28 @@ public final class ReflectionUtils {
     }
 
     /**
+     * Retriveve a method from a given class or one of its superclass.
+     *
+     * @param type           the class for which we want to retrieve the Method
+     * @param name           the name of the method
+     * @param parametersType the parameters type of the method
+     * @return
+     */
+    public static Method getMethod(Class<?> type, String name, Class<?>... parametersType) throws NoSuchMethodException {
+        try {
+            return type.getMethod(name, parametersType);
+        } catch (NoSuchMethodException e) {
+            if (!Object.class.equals(type.getSuperclass())) {
+                return getMethod(type.getSuperclass(), name, parametersType);
+            }
+            throw new NoSuchMethodException();
+        }
+    }
+
+    /**
      * Check if a class implements a specific interface.
      *
-     * @param type the class we want to check
+     * @param type           the class we want to check
      * @param interfaceClass the interface class we want to check against
      * @return true if type implements interfaceClass, else false
      */
@@ -109,7 +111,7 @@ public final class ReflectionUtils {
     /**
      * Check if a class extends a specific class.
      *
-     * @param type the class we want to check
+     * @param type       the class we want to check
      * @param superClass the super class we want to check against
      * @return true if type implements superClass, else false
      */
@@ -142,7 +144,7 @@ public final class ReflectionUtils {
         if (type == ObjectProperty.class) {
             return true;
         }
-        return  type == String.class || type == StringProperty.class || isArrayOfType(type, String.class) || type == Date.class || isArrayOfType(type, Date.class) || type == Calendar.class || isArrayOfType(type, Calendar.class) || type == Timestamp.class || isArrayOfType(type, Timestamp.class) || type == Integer.class || type == IntegerProperty.class || isArrayOfType(type, Integer.class) || type == int.class || isArrayOfType(type, int.class) || type == Long.class || type == LongProperty.class || isArrayOfType(type, Long.class) || type == long.class || isArrayOfType(type, long.class) || type == Double.class || type == DoubleProperty.class || isArrayOfType(type, Double.class) || type == double.class || isArrayOfType(type, double.class) || type == Boolean.class || type == BooleanProperty.class || isArrayOfType(type, Boolean.class) || type == boolean.class || isArrayOfType(type, boolean.class) || type == Locale.class || isArrayOfType(type, Locale.class) || type.isEnum() || (type.isArray() && type.getComponentType().isEnum());
+        return type == String.class || type == StringProperty.class || isArrayOfType(type, String.class) || type == Date.class || isArrayOfType(type, Date.class) || type == Calendar.class || isArrayOfType(type, Calendar.class) || type == Timestamp.class || isArrayOfType(type, Timestamp.class) || type == Integer.class || type == IntegerProperty.class || isArrayOfType(type, Integer.class) || type == int.class || isArrayOfType(type, int.class) || type == Long.class || type == LongProperty.class || isArrayOfType(type, Long.class) || type == long.class || isArrayOfType(type, long.class) || type == Double.class || type == DoubleProperty.class || isArrayOfType(type, Double.class) || type == double.class || isArrayOfType(type, double.class) || type == Boolean.class || type == BooleanProperty.class || isArrayOfType(type, Boolean.class) || type == boolean.class || isArrayOfType(type, boolean.class) || type == Locale.class || isArrayOfType(type, Locale.class) || type.isEnum() || (type.isArray() && type.getComponentType().isEnum());
     }
 
     private static boolean isArrayOfType(Class<?> c, Class<?> type) {
@@ -269,7 +271,7 @@ public final class ReflectionUtils {
      * Check if a field is parameterized with a specific class.
      *
      * @param field the field
-     * @param c the class to check against
+     * @param c     the class to check against
      * @return true if the field is parameterized and c is the class that
      * parameterizes the field, or is an interface that the parameterized class
      * implements, else false
