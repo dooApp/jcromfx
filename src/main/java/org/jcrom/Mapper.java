@@ -64,6 +64,7 @@ import org.jcrom.callback.DefaultJcromCallback;
 import org.jcrom.callback.JcromCallback;
 import org.jcrom.util.*;
 
+import static org.jcrom.util.JavaFXUtils.getObject;
 import static org.jcrom.util.JavaFXUtils.setObject;
 
 /**
@@ -219,7 +220,7 @@ class Mapper {
 
     Object getParentObject(Object childObject) throws IllegalAccessException {
         Field parentField = findParentField(childObject);
-        return parentField != null ? parentField.get(childObject) : null;
+        return parentField != null ? getObject(parentField, childObject) : null;
     }
 
     String getChildContainerNodePath(Object childObject, Object parentObject, Node parentNode) throws IllegalAccessException, RepositoryException {
@@ -237,7 +238,7 @@ class Mapper {
 
     String getNodeId(Object object) throws IllegalAccessException {
         Field idField = findIdField(object);
-        return idField != null ? (String) idField.get(object) : getNodeUUID(object);
+        return idField != null ? (String) getObject(idField, object) : getNodeUUID(object);
     }
 
     static boolean hasMixinType(Node node, String mixinType) throws RepositoryException {
@@ -756,11 +757,7 @@ class Mapper {
                 fileNodeMapper.getFilesFromNode(field, node, obj, depth, nodeFilter, this);
 
             } else if (jcrom.getAnnotationReader().isAnnotationPresent(field, JcrPath.class)) {
-                if (StringProperty.class.isAssignableFrom(field.getType())) {
-                    ((StringProperty) field.get(obj)).set(node.getPath());
-                } else {
-                    setObject(field, obj, node.getPath());
-                }
+                setObject(field, obj, node.getPath());
             }
         }
         return obj;
@@ -789,8 +786,8 @@ class Mapper {
         for (Field field : ReflectionUtils.getDeclaredAndInheritedFields(obj.getClass(), true)) {
             field.setAccessible(true);
             if (field.getName().equals("CGLIB$LAZY_LOADER_0")) {
-                if (field.get(obj) != null) {
-                    return field.get(obj);
+                if (getObject(field, obj) != null) {
+                    return getObject(field, obj);
                 } else {
                     // lazy loading has not been triggered yet, so
                     // we do it manually
@@ -806,7 +803,7 @@ class Mapper {
             field.setAccessible(true);
             if (field.getName().equals("CGLIB$CALLBACK_0")) {
                 try {
-                    return ((LazyLoader) field.get(obj)).loadObject();
+                    return ((LazyLoader) getObject(field, obj)).loadObject();
                 } catch (Exception e) {
                     throw new JcrMappingException("Could not trigger lazy loading", e);
                 }

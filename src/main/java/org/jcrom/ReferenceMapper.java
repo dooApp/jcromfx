@@ -41,9 +41,7 @@ import org.jcrom.util.NodeFilter;
 import org.jcrom.util.PathUtils;
 import org.jcrom.util.ReflectionUtils;
 
-import static org.jcrom.util.JavaFXUtils.isList;
-import static org.jcrom.util.JavaFXUtils.isMap;
-import static org.jcrom.util.JavaFXUtils.setObject;
+import static org.jcrom.util.JavaFXUtils.*;
 
 /**
  * This class handles mappings of type @JcrReference
@@ -99,12 +97,7 @@ class ReferenceMapper {
     private void addSingleReferenceToNode(Field field, Object obj, String propertyName, Node node) throws IllegalAccessException, RepositoryException {
         // extract the Identifier from the object, load the node, and add a reference to it
         JcrReference jcrReference = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrReference.class);
-        Object referenceObject = null;
-        if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-           referenceObject = ((ObjectProperty) field.get(obj)).get();
-        } else {
-           referenceObject = field.get(obj);
-        }
+        Object referenceObject = getObject(field, obj);
         if (referenceObject != null) {
             referenceObject = mapper.clearCglib(referenceObject);
         }

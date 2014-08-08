@@ -22,6 +22,8 @@ import javafx.beans.property.*;
 import javax.jcr.RepositoryException;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -34,25 +36,90 @@ import java.util.Map;
 public class JavaFXUtils {
 
     public static Object getObject(Field field, Object obj) throws IllegalAccessException {
-        Object value = field.get(obj);
-        if (value != null) {
-            if (javafx.beans.property.Property.class.isAssignableFrom(field.getType())) {
-                return ((Property) value).getValue();
-            } else {
-                return field.get(obj);
-            }
+        if (javafx.beans.property.Property.class.isAssignableFrom(field.getType())) {
+            return getPropertyValue(field, obj);
         } else {
-            return null;
+            return field.get(obj);
         }
     }
 
+    private static Object getPropertyValue(Field field, Object obj) throws IllegalAccessException {
+        Property property = (Property) field.get(obj);
+        if (property != null) {
+            return property.getValue();
+        } else {
+            try {
+                Method getter = obj.getClass().getMethod("get" + field.getName());
+                return getter.invoke(obj);
+            } catch (NoSuchMethodException e) {
+                try {
+                    property = getPropertyByPropertyGetter(field, obj);
+                    return property.getValue();
+                } catch (NoSuchMethodException e1) {
+                    return null;
+                } catch (InvocationTargetException e1) {
+                    return null;
+                }
+            } catch (InvocationTargetException e) {
+                return null;
+            }
+        }
+    }
+
+    private static void setPropertyValue(Field field, Object obj, Object value) throws IllegalAccessException {
+        Property property = (Property) field.get(obj);
+        if (property != null) {
+            property.setValue(value);
+        } else {
+            try {
+                Method setter = obj.getClass().getMethod("set" + field.getName(), value.getClass());
+                setter.invoke(obj, value);
+            } catch (NoSuchMethodException e) {
+                try {
+                    property = getPropertyByPropertyGetter(field, obj);
+                    property.setValue(value);
+                } catch (NoSuchMethodException e1) {
+                } catch (InvocationTargetException e1) {
+                }
+            } catch (InvocationTargetException e) {
+            }
+        }
+    }
+
+    private static Property getPropertyByPropertyGetter(Field field, Object obj) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Property property;
+        Method propertyGetter = obj.getClass().getDeclaredMethod(field.getName() + "Property");
+        property = (Property) propertyGetter.invoke(obj);
+        return property;
+    }
+
     public static void setObject(Field field, Object source, Object value) throws IllegalAccessException {
+        if (value == null)
+            return;
         if (MapProperty.class.isAssignableFrom(field.getType())) {
-            ((MapProperty) field.get(source)).putAll((Map) value);
+            Object mapProperty = field.get(source);
+            if (mapProperty != null) {
+                ((MapProperty) field.get(source)).putAll((Map) value);
+            } else {
+                try {
+                    ((MapProperty) getPropertyByPropertyGetter(field, source)).putAll((Map) value);
+                } catch (NoSuchMethodException e) {
+                } catch (InvocationTargetException e) {
+                }
+            }
         } else if (ListProperty.class.isAssignableFrom(field.getType())) {
-            ((ListProperty) field.get(source)).setAll((Collection) value);
+            Object listProperty = field.get(source);
+            if (listProperty != null) {
+                ((ListProperty) field.get(source)).setAll((Collection) value);
+            } else {
+                try {
+                    ((ListProperty) getPropertyByPropertyGetter(field, source)).setAll(value);
+                } catch (NoSuchMethodException e) {
+                } catch (InvocationTargetException e) {
+                }
+            }
         } else if (javafx.beans.property.Property.class.isAssignableFrom(field.getType())) {
-            ((Property) field.get(source)).setValue(value);
+            setPropertyValue(field, source, value);
         } else {
             field.set(source, value);
         }
