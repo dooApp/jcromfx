@@ -45,9 +45,7 @@ import org.jcrom.annotations.JcrVersionCreated;
 import org.jcrom.annotations.JcrVersionName;
 import org.jcrom.util.ReflectionUtils;
 
-import static org.jcrom.util.JavaFXUtils.isList;
-import static org.jcrom.util.JavaFXUtils.isMap;
-import static org.jcrom.util.JavaFXUtils.isNotString;
+import static org.jcrom.util.JavaFXUtils.*;
 
 /**
  * This class is used by Jcrom to validate that the classes being mapped are correctly annotated as valid JCR classes.
@@ -128,18 +126,18 @@ class Validator {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrProperty is a java.util.Map that is not parameterised with a valid value property type.");
                     }
 
-                } else if (!ReflectionUtils.isPropertyType(field.getType())) {
+                } else if (!ReflectionUtils.isPropertyType(getType(field, null))) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrProperty is not a valid JCR property (type is " + field.getType().getName() + ").");
                 }
 
             } else if (field.isAnnotationPresent(JcrProtectedProperty.class)) {
-                if (!ReflectionUtils.isPropertyType(field.getType())) {
+                if (!ReflectionUtils.isPropertyType(getType(field, null))) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrProtectedProperty is not a valid JCR property (type is " + field.getType().getName() + ").");
                 }
 
             } else if (field.isAnnotationPresent(JcrSerializedProperty.class)) {
                 // make sure field is Serializable
-                if (!ReflectionUtils.implementsInterface(field.getType(), Serializable.class)) {
+                if (!ReflectionUtils.implementsInterface(getType(field,null), Serializable.class)) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrSerializedProperty does not implement java.io.Serializable (type is " + field.getType().getName() + ").");
                 }
 
@@ -152,13 +150,13 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrUUID.class)) {
                 // make sure this is a String field
-                if (field.getType() != String.class) {
+                if (getType(field, null) != String.class) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrUUID must be of type java.lang.String, but is of type: " + field.getType().getName());
                 }
 
             } else if (field.isAnnotationPresent(JcrIdentifier.class)) {
                 // make sure this is a String field
-                if (field.getType() != String.class) {
+                if (getType(field, null) != String.class) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrIdentifier must be of type java.lang.String, but is of type: " + field.getType().getName());
                 }
 
@@ -171,42 +169,42 @@ class Validator {
 
             } else if (field.isAnnotationPresent(JcrBaseVersionName.class)) {
                 // make sure this is a String field
-                if (field.getType() != String.class) {
+                if (getType(field, null) != String.class) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrBaseVersionName must be of type java.lang.String, but is of type: " + field.getType().getName());
                 }
 
             } else if (field.isAnnotationPresent(JcrBaseVersionCreated.class)) {
                 // make sure this is a Date/Calendar/Timestamp field
-                if (!ReflectionUtils.isDateType(field.getType())) {
+                if (!ReflectionUtils.isDateType(getType(field, null))) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrBaseVersionCreated must be of type java.util.Date / java.util.Calendar / java.sql.Timestamp, but is of type: " + field.getType().getName());
                 }
 
             } else if (field.isAnnotationPresent(JcrVersionName.class)) {
                 // make sure this is a String field
-                if (field.getType() != String.class) {
+                if (getType(field, null) != String.class) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrVersionName must be of type java.lang.String, but is of type: " + field.getType().getName());
                 }
 
             } else if (field.isAnnotationPresent(JcrVersionCreated.class)) {
                 // make sure this is a Date/Calendar/Timestamp field
-                if (!ReflectionUtils.isDateType(field.getType())) {
+                if (!ReflectionUtils.isDateType(getType(field, null))) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrVersionCreated must be of type java.util.Date / java.util.Calendar / java.sql.Timestamp, but is of type: " + field.getType().getName());
                 }
 
             } else if (field.isAnnotationPresent(JcrCheckedout.class)) {
                 // make sure this i a boolean field
-                if (field.getType() != boolean.class && field.getType() != Boolean.class) {
+                if (getType(field, null) != boolean.class && getType(field, null) != Boolean.class) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrCheckedout must be of type boolean, but is of type: " + field.getType().getName());
                 }
 
             } else if (field.isAnnotationPresent(JcrCreated.class)) {
                 // make sure this is a Date/Calendar/Timestamp field
-                if (!ReflectionUtils.isDateType(field.getType())) {
+                if (!ReflectionUtils.isDateType(getType(field, null))) {
                     throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrCreated must be of type java.util.Date / java.util.Calendar / java.sql.Timestamp, but is of type: " + field.getType().getName());
                 }
             } else if (field.isAnnotationPresent(JcrParentNode.class)) {
                 // make sure that the parent node type is a valid JCR class
-                validateInternal(field.getType(), validClasses, dynamicInstantiation);
+                validateInternal(getType(field, null), validClasses, dynamicInstantiation);
 
             } else if (field.isAnnotationPresent(JcrChildNode.class)) {
                 // make sure that the child node type are valid JCR classes
@@ -266,7 +264,7 @@ class Validator {
                     }
 
                 } else {
-                    if (!ReflectionUtils.extendsClass(field.getType(), JcrFile.class)
+                    if (!ReflectionUtils.extendsClass(getType(field, null), JcrFile.class)
                             && !ObjectProperty.class.isAssignableFrom(field.getType())) {
                         throw new JcrMappingException("In [" + c.getName() + "]: Field [" + field.getName() + "] which is annotated as @JcrFileNode is of type that does not extend JcrFile: " + field.getType().getName());
                     }

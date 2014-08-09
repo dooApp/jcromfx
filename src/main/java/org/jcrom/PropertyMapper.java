@@ -240,7 +240,7 @@ public class PropertyMapper {
     private void mapSerializedFieldToProperty(Field field, Object obj, Node node, int depth, NodeFilter nodeFilter) throws IllegalAccessException, RepositoryException, IOException {
 
         String propertyName = getSerializedPropertyName(field);
-        Object fieldValue = field.get(obj);
+        Object fieldValue = getObject(field, obj);
         // make sure that this property is supposed to be updated
         if (nodeFilter == null || nodeFilter.isIncluded(NodeFilter.PROPERTY_PREFIX + field.getName(), node, depth)) {
             if (fieldValue != null) {
