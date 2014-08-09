@@ -47,7 +47,7 @@ import org.jcrom.util.ReflectionUtils;
  */
 public class Jcrom {
 
-    private final Mapper mapper;
+    protected Mapper mapper;
     private final Validator validator;
 
     private AnnotationReader annotationReader;

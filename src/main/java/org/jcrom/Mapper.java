@@ -73,7 +73,7 @@ import static org.jcrom.util.JavaFXUtils.setObject;
  * @author Olafur Gauti Gudmundsson
  * @author Nicolas Dos Santos
  */
-class Mapper {
+public class Mapper {
 
     static final String DEFAULT_FIELDNAME = "fieldName";
 
@@ -84,13 +84,13 @@ class Mapper {
     /** Specifies whether to retrieve mapped class name from node property */
     private final boolean dynamicInstantiation;
 
-    private final PropertyMapper propertyMapper;
+    protected PropertyMapper propertyMapper;
 
-    private final ReferenceMapper referenceMapper;
+    protected ReferenceMapper referenceMapper;
 
-    private final FileNodeMapper fileNodeMapper;
+    protected FileNodeMapper fileNodeMapper;
 
-    private final ChildNodeMapper childNodeMapper;
+    protected ChildNodeMapper childNodeMapper;
 
     private final Jcrom jcrom;
 
@@ -102,7 +102,7 @@ class Mapper {
      * @param entityClass
      *            the class that we will me mapping to/from
      */
-    Mapper(boolean cleanNames, boolean dynamicInstantiation, Jcrom jcrom) {
+    public Mapper(boolean cleanNames, boolean dynamicInstantiation, Jcrom jcrom) {
         this.cleanNames = cleanNames;
         this.dynamicInstantiation = dynamicInstantiation;
         this.jcrom = jcrom;

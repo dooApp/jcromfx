@@ -51,8 +51,7 @@ import org.jcrom.util.JcrUtils;
 import org.jcrom.util.NodeFilter;
 import org.jcrom.util.ReflectionUtils;
 
-import static org.jcrom.util.JavaFXUtils.getValue;
-import static org.jcrom.util.JavaFXUtils.setObject;
+import static org.jcrom.util.JavaFXUtils.*;
 
 /**
  * This class handles mappings of type @JcrProperty
@@ -60,7 +59,7 @@ import static org.jcrom.util.JavaFXUtils.setObject;
  * @author Olafur Gauti Gudmundsson
  * @author Nicolas Dos Santos
  */
-class PropertyMapper {
+public class PropertyMapper {
 
     private final Mapper mapper;
 
@@ -110,7 +109,7 @@ class PropertyMapper {
         }
     }
 
-    String getSerializedPropertyName(Field field) {
+    protected String getSerializedPropertyName(Field field) {
         JcrSerializedProperty jcrProperty = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrSerializedProperty.class);
         String propertyName = field.getName();
         if (!jcrProperty.name().equals(Mapper.DEFAULT_FIELDNAME)) {
@@ -119,7 +118,7 @@ class PropertyMapper {
         return propertyName;
     }
 
-    String getPropertyName(Field field) {
+    protected String getPropertyName(Field field) {
         JcrProperty jcrProperty = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrProperty.class);
         String name = field.getName();
         if (!jcrProperty.name().equals(Mapper.DEFAULT_FIELDNAME)) {
@@ -128,7 +127,7 @@ class PropertyMapper {
         return name;
     }
 
-    String getProtectedPropertyName(Field field) {
+    protected String getProtectedPropertyName(Field field) {
         JcrProtectedProperty jcrProperty = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrProtectedProperty.class);
         String name = field.getName();
         if (!jcrProperty.name().equals(Mapper.DEFAULT_FIELDNAME)) {
@@ -156,24 +155,6 @@ class PropertyMapper {
                 mapToField(name, field, obj, node);
             }
         }
-    }
-
-    /**
-     * Check whether the given field is a Map, either a good old java one or a JavaFX MapProperty
-     *
-     */
-    private boolean isMap(Field field) {
-        return ReflectionUtils.implementsInterface(field.getType(), Map.class)
-                || MapProperty.class.isAssignableFrom(field.getType());
-    }
-
-    /**
-     * Check whether the given field is a List, either a good old java one or a JavaFX ListProperty
-     *
-     */
-    private boolean isList(Class<?> type) {
-        return ReflectionUtils.implementsInterface(type, List.class)
-                || ListProperty.class.isAssignableFrom(type);
     }
 
     void mapProtectedPropertyToField(Object obj, Field field, Node node) throws RepositoryException, IllegalAccessException, IOException {

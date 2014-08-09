@@ -54,7 +54,7 @@ import static org.jcrom.util.JavaFXUtils.setObject;
  * @author Olafur Gauti Gudmundsson
  * @author Nicolas Dos Santos
  */
-class FileNodeMapper {
+public class FileNodeMapper {
 
     private final Mapper mapper;
 
@@ -62,7 +62,7 @@ class FileNodeMapper {
         this.mapper = mapper;
     }
 
-    private String getNodeName(Field field) {
+    protected String getNodeName(Field field) {
         JcrFileNode jcrFileNode = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrFileNode.class);
         String name = field.getName();
         if (!jcrFileNode.name().equals(Mapper.DEFAULT_FIELDNAME)) {

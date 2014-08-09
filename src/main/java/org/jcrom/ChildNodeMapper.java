@@ -45,7 +45,7 @@ import static org.jcrom.util.JavaFXUtils.*;
  * @author Olafur Gauti Gudmundsson
  * @author Nicolas Dos Santos
  */
-class ChildNodeMapper {
+public class ChildNodeMapper {
 
     private static final String POLICY_NODE_NAME = "rep:policy";
 
@@ -55,7 +55,7 @@ class ChildNodeMapper {
         this.mapper = mapper;
     }
 
-    private String getNodeName(Field field) {
+    protected String getNodeName(Field field) {
         JcrChildNode jcrChildNode = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrChildNode.class);
         String name = field.getName();
         if (!jcrChildNode.name().equals(Mapper.DEFAULT_FIELDNAME)) {

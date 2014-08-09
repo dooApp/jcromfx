@@ -49,7 +49,7 @@ import static org.jcrom.util.JavaFXUtils.*;
  * @author Olafur Gauti Gudmundsson
  * @author Nicolas Dos Santos
  */
-class ReferenceMapper {
+public class ReferenceMapper {
 
     private final Mapper mapper;
 
@@ -57,7 +57,7 @@ class ReferenceMapper {
         this.mapper = mapper;
     }
 
-    private String getPropertyName(Field field) {
+    protected String getPropertyName(Field field) {
         JcrReference jcrReference = mapper.getJcrom().getAnnotationReader().getAnnotation(field, JcrReference.class);
         String name = field.getName();
         if (!jcrReference.name().equals(Mapper.DEFAULT_FIELDNAME)) {
