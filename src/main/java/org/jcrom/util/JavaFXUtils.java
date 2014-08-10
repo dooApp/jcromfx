@@ -17,6 +17,7 @@
  */
 package org.jcrom.util;
 
+import javafx.application.Platform;
 import javafx.beans.property.*;
 
 import javax.jcr.RepositoryException;
@@ -68,14 +69,29 @@ public class JavaFXUtils {
         }
     }
 
-    private static void setPropertyValue(Field field, Object obj, Object value) throws IllegalAccessException {
+    private static void setPropertyValue(Field field, final Object obj, final Object value) throws IllegalAccessException {
         Property property = (Property) field.get(obj);
         if (property != null) {
-            property.setValue(value);
+            final Property finalProperty = property;
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    finalProperty.setValue(value);
+                }
+            });
         } else {
             try {
-                Method setter = getMethod(obj.getClass(), "set" + field.getName(), value.getClass());
-                setter.invoke(obj, value);
+                final Method setter = getMethod(obj.getClass(), "set" + field.getName(), value.getClass());
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            setter.invoke(obj, value);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
             } catch (NoSuchMethodException e) {
                 try {
                     property = getPropertyByPropertyGetter(field, obj);
@@ -83,7 +99,6 @@ public class JavaFXUtils {
                 } catch (NoSuchMethodException e1) {
                 } catch (InvocationTargetException e1) {
                 }
-            } catch (InvocationTargetException e) {
             }
         }
     }
