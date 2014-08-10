@@ -65,6 +65,7 @@ import org.jcrom.callback.JcromCallback;
 import org.jcrom.util.*;
 
 import static org.jcrom.util.JavaFXUtils.getObject;
+import static org.jcrom.util.JavaFXUtils.getType;
 import static org.jcrom.util.JavaFXUtils.setObject;
 
 /**
@@ -650,7 +651,7 @@ public class Mapper {
         return false;
     }
 
-    Object mapNodeToClass(Object obj, Node node, NodeFilter nodeFilter, Object parentObject, int depth) throws ClassNotFoundException, InstantiationException, RepositoryException, IllegalAccessException, IOException {
+    protected Object mapNodeToClass(Object obj, Node node, NodeFilter nodeFilter, Object parentObject, int depth) throws ClassNotFoundException, InstantiationException, RepositoryException, IllegalAccessException, IOException {
 
         if (!ReflectionUtils.extendsClass(obj.getClass(), JcrFile.class)) {
             // this does not apply for JcrFile extensions
@@ -743,7 +744,7 @@ public class Mapper {
                 }
 
             } else if (jcrom.getAnnotationReader().isAnnotationPresent(field, JcrParentNode.class)) {
-                if (parentObject != null && field.getType().isInstance(parentObject)) {
+                if (parentObject != null && getType(field, obj).isInstance(parentObject)) {
                     setObject(field, obj, parentObject);
                 }
 
