@@ -72,26 +72,11 @@ public class JavaFXUtils {
     private static void setPropertyValue(Field field, final Object obj, final Object value) throws IllegalAccessException {
         Property property = (Property) field.get(obj);
         if (property != null) {
-            final Property finalProperty = property;
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    finalProperty.setValue(value);
-                }
-            });
+            updateProperty(value, property);
         } else {
             try {
                 final Method setter = getMethod(obj.getClass(), "set" + field.getName(), value.getClass());
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            setter.invoke(obj, value);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
+                invokeSetter(obj, value, setter);
             } catch (NoSuchMethodException e) {
                 try {
                     property = getPropertyByPropertyGetter(field, obj);
@@ -100,6 +85,45 @@ public class JavaFXUtils {
                 } catch (InvocationTargetException e1) {
                 }
             }
+        }
+    }
+
+    private static void invokeSetter(final Object obj, final Object value, final Method setter) {
+        try {
+            setter.invoke(obj, value);
+        } catch (RuntimeException e) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                setter.invoke(obj, value);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
+            });
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void updateProperty(final Object value, final Property finalProperty) {
+        try {
+            finalProperty.setValue(value);
+        } catch (RuntimeException e) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    finalProperty.setValue(value);
+                }
+            });
         }
     }
 
