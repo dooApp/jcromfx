@@ -82,7 +82,9 @@ public class JavaFXUtils {
                     property = getPropertyByPropertyGetter(field, obj);
                     property.setValue(value);
                 } catch (NoSuchMethodException e1) {
+                    e1.printStackTrace();
                 } catch (InvocationTargetException e1) {
+                    e1.printStackTrace();
                 }
             }
         }

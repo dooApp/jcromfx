@@ -44,9 +44,7 @@ import org.jcrom.util.NodeFilter;
 import org.jcrom.util.ReflectionUtils;
 import org.jcrom.util.io.IOUtils;
 
-import static org.jcrom.util.JavaFXUtils.isList;
-import static org.jcrom.util.JavaFXUtils.isMap;
-import static org.jcrom.util.JavaFXUtils.setObject;
+import static org.jcrom.util.JavaFXUtils.*;
 
 /**
  * This class handles mappings of type @JcrFileNode
@@ -105,7 +103,7 @@ public class FileNodeMapper {
                 //contentNode.setProperty("jcr:data", new ByteArrayInputStream(dataProvider.getBytes()));
                 Binary binary = valueFactory.createBinary(new ByteArrayInputStream(dataProvider.getBytes()));
                 contentNode.setProperty(Property.JCR_DATA, binary);
-            } else if (dataProvider.isStream() && dataProvider.getInputStream() != null) {
+            } else if (dataProvider.isStream() && dataProvider.getInputStream() != null && !BinaryValueJcrDataProvider.class.isAssignableFrom(dataProvider.getClass())) {
                 try {
                     //contentNode.setProperty("jcr:data", dataProvider.getInputStream());
                     Binary binary = valueFactory.createBinary(dataProvider.getInputStream());
@@ -194,25 +192,15 @@ public class FileNodeMapper {
         Node fileContainer = createFileFolderNode(fileJcrNode, nodeName, node, mapper);
 
         if (!fileContainer.hasNodes()) {
-            if (field.get(obj) != null) {
-                JcrFile file = null;
-                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-                    file = (JcrFile) ((ObjectProperty)field.get(obj)).get();
-                } else {
-                    file = (JcrFile) field.get(obj);
-                }
+            if (getObject(field, obj) != null) {
+                JcrFile file = (JcrFile) getObject(field, obj);
                 if (file != null) {
                     addFileNode(fileJcrNode, fileContainer, file, mapper);
                 }
             }
         } else {
-            if (field.get(obj) != null) {
-                JcrFile file = null;
-                if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-                    file = (JcrFile) ((ObjectProperty)field.get(obj)).get();
-                } else {
-                    file = (JcrFile) field.get(obj);
-                }
+            if (getObject(field, obj) != null) {
+                JcrFile file = (JcrFile) getObject(field, obj);
                 if (file != null) {
                     updateFileNode(fileContainer.getNodes().nextNode(), file, nodeFilter, depth, mapper);
                 }
@@ -263,7 +251,7 @@ public class FileNodeMapper {
         JcrNode fileJcrNode = ReflectionUtils.getJcrNodeAnnotation(ReflectionUtils.getParameterizedClass(field));
         Node fileContainer = createFileFolderNode(fileJcrNode, nodeName, node, mapper);
 
-        List<?> children = (List<?>) field.get(obj);
+        List<?> children = (List<?>) getObject(field, obj);
         updateFileList(children, fileContainer, fileJcrNode, mapper, depth, nodeFilter);
     }
 
@@ -377,8 +365,8 @@ public class FileNodeMapper {
         // file data
         if (nodeFilter.isIncluded("jcr:data", depth)) {
             if (jcrFileNode == null || jcrFileNode.loadType() == JcrFileNode.LoadType.STREAM) {
-                InputStream is = contentNode.getProperty(Property.JCR_DATA).getBinary().getStream();
-                JcrDataProviderImpl dataProvider = new JcrDataProviderImpl(is, contentNode.getProperty(Property.JCR_DATA).getLength());
+                Binary binary = contentNode.getProperty(Property.JCR_DATA).getBinary();
+                JcrDataProvider dataProvider = new BinaryValueJcrDataProvider(binary);
                 fileObj.setDataProvider(dataProvider);
             } else if (jcrFileNode.loadType() == JcrFileNode.LoadType.BYTES) {
                 InputStream is = contentNode.getProperty(Property.JCR_DATA).getBinary().getStream();
@@ -437,8 +425,8 @@ public class FileNodeMapper {
         // file data
         if (nodeFilter.isIncluded("jcr:data", depth)) {
             if (jcrFileNode == null || jcrFileNode.loadType() == JcrFileNode.LoadType.STREAM) {
-                InputStream is = contentNode.getProperty(Property.JCR_DATA).getBinary().getStream();
-                JcrDataProviderImpl dataProvider = new JcrDataProviderImpl(is, contentNode.getProperty(Property.JCR_DATA).getLength());
+                Binary binary = contentNode.getProperty(Property.JCR_DATA).getBinary();
+                JcrDataProvider dataProvider = new BinaryValueJcrDataProvider(binary);
                 fileObj.setDataProvider(dataProvider);
             } else if (jcrFileNode.loadType() == JcrFileNode.LoadType.BYTES) {
                 InputStream is = contentNode.getProperty(Property.JCR_DATA).getBinary().getStream();
@@ -485,7 +473,7 @@ public class FileNodeMapper {
         if (node.hasNode(nodeName) && nodeFilter.isIncluded(field.getName(), depth)) {
             // file nodes are always stored inside a folder node
             Node fileContainer = node.getNode(nodeName);
-            if (isList(field.getType())) {
+            if (isList(getType(field, obj))) {
                 // we can expect more than one child object here
                 List<?> children;
                 Class<?> childObjClass = ReflectionUtils.getParameterizedClass(field);
@@ -503,18 +491,11 @@ public class FileNodeMapper {
                 // lazy loading is applied to each value in the Map
                 setObject(field, obj, getFileMap(field, fileContainer, jcrFileNode, obj, depth, nodeFilter, mapper));
 
-            } else if (MapProperty.class.isAssignableFrom(field.getType())) {
-                ((MapProperty)field.get(obj)).putAll(getFileMap(field, fileContainer, jcrFileNode, obj, depth, nodeFilter, mapper));
             } else {
                 // instantiate the field class
                 if (fileContainer.hasNodes()) {
                     Object file = null;
-                    Class type = null;
-                    if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-                        type = ReflectionUtils.getObjectPropertyGeneric(obj, field);
-                    } else {
-                        type = field.getType();
-                    }
+                    Class type = getType(field, obj);
                     if (jcrFileNode.lazy()) {
                         // lazy loading
                         file = ProxyFactory.createFileNodeProxy(type, obj, fileContainer.getPath(), node.getSession(), mapper, depth, nodeFilter, jcrFileNode);
@@ -522,11 +503,7 @@ public class FileNodeMapper {
                         // eager loading
                         file = getSingleFile(type, fileContainer, obj, jcrFileNode, depth, nodeFilter, mapper);
                     }
-                    if (ObjectProperty.class.isAssignableFrom(field.getType())) {
-                        ((ObjectProperty) field.get(obj)).set(file);
-                    } else {
-                        field.set(obj, file);
-                    }
+                    setObject(field, obj, file);
                 }
             }
         }
