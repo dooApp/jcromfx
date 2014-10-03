@@ -1,7 +1,7 @@
 JCROMfx
 =======
 
-[JCROM](https://code.google.com/p/jcrom/) fork with JavaFX properties support.
+JavaFX persistence made easy - [JCROM](https://code.google.com/p/jcrom/) fork with JavaFX properties support.
 
 About
 -----
