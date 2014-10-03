@@ -52,7 +52,7 @@ public class JavaFXUtils {
             return property.getValue();
         } else {
             try {
-                Method getter = getMethod(obj.getClass(), "get" + field.getName());
+                Method getter = getMethod(obj.getClass(), "get" + capitalize(field.getName()));
                 return getter.invoke(obj);
             } catch (NoSuchMethodException e) {
                 try {
@@ -69,18 +69,22 @@ public class JavaFXUtils {
         }
     }
 
+    private static String capitalize(String name) {
+        return name.substring(0, 1).toUpperCase() + name.substring(1);
+    }
+
     private static void setPropertyValue(Field field, final Object obj, final Object value) throws IllegalAccessException {
         Property property = (Property) field.get(obj);
         if (property != null) {
             updateProperty(value, property);
         } else {
             try {
-                final Method setter = getMethod(obj.getClass(), "set" + field.getName(), value.getClass());
+                final Method setter = getMethod(obj.getClass(), "set" + capitalize(field.getName()), value.getClass());
                 invokeSetter(obj, value, setter);
             } catch (NoSuchMethodException e) {
                 try {
                     property = getPropertyByPropertyGetter(field, obj);
-                    property.setValue(value);
+                    updateProperty(value, property);
                 } catch (NoSuchMethodException e1) {
                     e1.printStackTrace();
                 } catch (InvocationTargetException e1) {
@@ -97,16 +101,11 @@ public class JavaFXUtils {
             Platform.runLater(new Runnable() {
                 @Override
                 public void run() {
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                setter.invoke(obj, value);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    });
+                    try {
+                        setter.invoke(obj, value);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         } catch (InvocationTargetException e) {
@@ -117,6 +116,11 @@ public class JavaFXUtils {
     }
 
     private static void updateProperty(final Object value, final Property finalProperty) {
+        if (finalProperty.isBound()) {
+            System.out.println("Impossible to set the value " + value + " to " + finalProperty.getName() + ". Property is bound.");
+            return;
+        }
+
         try {
             finalProperty.setValue(value);
         } catch (RuntimeException e) {
