@@ -11,6 +11,8 @@ JCROMfx is a [JCROM](https://code.google.com/p/jcrom/) fork that enable the supp
 JCROM is a lightweight framework for mapping Java objects to/from a Java Content Repository (JCR).
  
 With JCROMfx you can map your beans with Java and/or JavaFX properties directly to a JCR.
+
+**Important note: [JavaFX properties support](https://code.google.com/p/jcrom/wiki/JavaFXPropertiesSupport) has now been integrated by default into JCROM, so please consider using the original jcrom project directly.**
  
 How to use it?
 --------------
